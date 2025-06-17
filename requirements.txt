@@ -1,0 +1,7 @@
+PyQt5
+opencv-python
+moviepy
+librosa
+pydub
+numpy
+scikit-learn
