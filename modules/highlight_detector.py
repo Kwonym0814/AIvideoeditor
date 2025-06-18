@@ -2,7 +2,21 @@ from moviepy.video.io.VideoFileClip import VideoFileClip
 import cv2
 import numpy as np
 
-def detect_highlights(video_path, frame_duration=1.0, motion_threshold=70):
+def merge_and_expand_highlights(highlights, min_gap=3.0, expand=1.0, duration=None):
+    if not highlights:
+        return []
+    merged = []
+    prev_start, prev_end = highlights[0]
+    for start, end in highlights[1:]:
+        if start - prev_end < min_gap:
+            prev_end = end  # 구간 병합
+        else:
+            merged.append((max(0, prev_start - expand), min(prev_end + expand, duration)))
+            prev_start, prev_end = start, end
+    merged.append((max(0, prev_start - expand), min(prev_end + expand, duration)))
+    return merged
+
+def detect_highlights(video_path, frame_duration=1.0, motion_threshold=50):
     video = VideoFileClip(video_path)
     duration = video.duration
     highlights = []
@@ -29,8 +43,8 @@ def detect_highlights(video_path, frame_duration=1.0, motion_threshold=70):
         frame_idx += 1
     cap.release()
 
-    # threshold 이상인 구간만 하이라이트로
     threshold = np.percentile(motions, motion_threshold)
+    raw_highlights = []
     start = None
     for i, motion in enumerate(motions):
         if motion > threshold:
@@ -40,8 +54,10 @@ def detect_highlights(video_path, frame_duration=1.0, motion_threshold=70):
             if start is not None:
                 end = times[i]
                 if end - start > 1.0:
-                    highlights.append((start, end))
+                    raw_highlights.append((start, end))
                 start = None
     if start is not None:
-        highlights.append((start, duration))
+        raw_highlights.append((start, duration))
+    # 구간 병합 및 확장 적용
+    highlights = merge_and_expand_highlights(raw_highlights, min_gap=3.0, expand=1.0, duration=duration)
     return highlights

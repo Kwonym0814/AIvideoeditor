@@ -1,8 +1,14 @@
+import time
 from modules.highlight_detector import detect_highlights
 from modules.video_editor import edit_video
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QFileDialog, QLabel, QVBoxLayout, QWidget
 import sys
 import os
+
+def format_time(seconds):
+    m = int(seconds // 60)
+    s = int(seconds % 60)
+    return f"{m:02d}min {s:02d}sec"
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -36,10 +42,18 @@ class MainWindow(QMainWindow):
 
     def process_video(self):
         if self.video_path:
+            t0 = time.time()
             self.label.setText('하이라이트 추출 중...')
             highlights = detect_highlights(self.video_path)
+            t1 = time.time()
+            self.label.setText('하이라이트 편집 중...')
             output_path = edit_video(self.video_path, highlights)
-            self.label.setText(f'완료! 결과 파일: {output_path}')
+            t2 = time.time()
+            extract_time = t1 - t0
+            edit_time = t2 - t1
+            self.label.setText(f'완료! 결과 파일: {output_path}\n'
+                               f'하이라이트 추출: {format_time(extract_time)}, 편집: {format_time(edit_time)}')
+            print(f'하이라이트 추출: {format_time(extract_time)}, 편집: {format_time(edit_time)}')
 
 def main():
     # Qt 플러그인 경로 환경 변수 설정 (PyQt5>=5.15.4에서 Qt5/plugins 경로 사용)
